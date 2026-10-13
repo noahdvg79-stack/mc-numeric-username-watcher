@@ -24,7 +24,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Scan Discord channel and notify
+      - name: Scan latest 250 Discord messages and notify
         env:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           SOURCE_CHANNEL_ID: ${{ secrets.SOURCE_CHANNEL_ID }}
