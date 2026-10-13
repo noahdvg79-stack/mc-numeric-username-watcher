@@ -1,42 +1,37 @@
 # Minecraft numeric username watcher (GitHub Actions)
 
-This project runs in GitHub Actions, not on your PC. It checks a Discord channel every five minutes and sends matching names to a Discord webhook you control.
+This project runs on GitHub-hosted runners, not on your PC. It checks the source Discord channel approximately every five minutes and forwards new matching usernames to your destination Discord webhook.
 
-It looks for messages containing a line such as:
+## What it scans
 
-`🎉 Minecraft username found: _816`
+Each run reads the **latest 250 messages** in the source channel. Discord allows at most 100 messages per API request, so the script fetches multiple pages.
 
-Accepted names are 3–16 characters and contain only digits plus at most one underscore, with at least one digit. Names with letters or `__` are ignored. It checks message content and common embed text fields.
+It searches message content and common embed text fields for the phrase:
+
+`Minecraft username found: _816`
+
+It accepts 3–16 character names containing only digits and at most one underscore, with at least one digit. Examples accepted: `1862`, `_816`, `6_79`. Names with letters, two underscores, or a trailing underscore are ignored.
+
+The script remembers usernames already forwarded in `state.json`, so the same username is not repeatedly posted on every run. It checks the latest 250 messages every time, but it only forwards names it has not seen before.
 
 ## Setup
 
-### 1. Create a Discord bot for reading the source channel
-1. Go to https://discord.com/developers/applications and create an application.
-2. Open **Bot** and create/reset its bot token. Keep the token private.
-3. Under **OAuth2 → URL Generator**, select the `bot` scope and the `View Channels` and `Read Message History` permissions.
-4. Use the generated invite URL to add the bot to the server where the username finder posts.
-5. Copy the source channel ID: in Discord, enable **User Settings → Advanced → Developer Mode**, then right-click the channel and choose **Copy Channel ID**.
+1. Create a Discord application/bot at https://discord.com/developers/applications.
+2. Invite the bot to the source server with `View Channels` and `Read Message History`.
+3. In Discord, enable Developer Mode under User Settings → Advanced, then right-click the source channel and choose Copy Channel ID.
+4. Create a webhook in the destination channel under Edit Channel → Integrations → Webhooks.
+5. Create a GitHub repository and upload `watcher.py`, `state.json`, `README.md`, and `.github/workflows/watch.yml`, preserving the folder structure.
+6. Under repository Settings → Secrets and variables → Actions, add:
+   - `DISCORD_BOT_TOKEN` — bot token
+   - `SOURCE_CHANNEL_ID` — source channel ID
+   - `OUTPUT_WEBHOOK_URL` — destination webhook URL
+7. In Actions, enable workflows if prompted, then run **Watch Minecraft usernames** manually to test.
 
-The bot needs permission to view that channel and read its message history. Do not use a personal account token or self-bot.
+## Important limitations
 
-### 2. Create a destination Discord webhook
-In the channel where you want notifications, open **Edit Channel → Integrations → Webhooks → New Webhook**, then copy its webhook URL. Treat that URL like a password.
-
-### 3. Put the files in a GitHub repository
-1. Create a new repository on https://github.com/new.
-2. Upload `watcher.py`, `state.json`, and the `.github/workflows/watch.yml` file, preserving the folder structure.
-3. In the repository, open **Settings → Secrets and variables → Actions → New repository secret** and add:
-   - `DISCORD_BOT_TOKEN` — the bot token
-   - `SOURCE_CHANNEL_ID` — the ID of the channel to read
-   - `OUTPUT_WEBHOOK_URL` — the destination webhook URL
-4. Open the **Actions** tab and enable workflows if GitHub prompts you.
-5. Choose **Watch Minecraft usernames → Run workflow** to test it.
-
-The first run checks up to the latest 100 channel messages. Later runs process messages newer than the saved cursor. GitHub scheduled jobs are approximate and may run late; they are not a real-time listener.
-
-## Notes and troubleshooting
-- The bot must be invited to the source server and have permission to view the channel and read message history.
-- This expects the phrase `Minecraft username found:` in the message or embed text.
-- GitHub Actions commits `state.json` to remember the last processed message and avoid repeatedly scanning old messages.
-- If you want to reset the scan, edit `state.json` and set `last_message_id` to `"0"` (the first run then checks only the latest 100 messages).
-- Never commit tokens or webhook URLs into the code. Use GitHub repository secrets only.
+- GitHub's scheduled workflow is approximate and can be delayed; this is not instant monitoring.
+- The first run scans the latest 250 messages. Later runs also scan the latest 250 messages, but forward only usernames not already recorded.
+- The source messages must contain the phrase `Minecraft username found:` followed by the username.
+- GitHub Actions commits `state.json` to remember names already forwarded.
+- Do not put your bot token or webhook URL in code or commit them to the repository. Use GitHub Actions secrets only.
+- Never use a personal Discord account token or self-bot.
