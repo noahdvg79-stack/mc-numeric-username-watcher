@@ -1,3 +1,4 @@
+
 name: Watch Minecraft usernames
 
 on:
@@ -15,6 +16,8 @@ concurrency:
 jobs:
   watch:
     runs-on: ubuntu-latest
+    timeout-minutes: 350
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -24,15 +27,9 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Scan latest 250 Discord messages and notify
+      - name: Run continuous watcher
         env:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           SOURCE_CHANNEL_ID: ${{ secrets.SOURCE_CHANNEL_ID }}
           OUTPUT_WEBHOOK_URL: ${{ secrets.OUTPUT_WEBHOOK_URL }}
-        run: python watcher.py
-
-      - name: Save watcher state
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "Update username watcher state"
-          file_pattern: state.json
+        run: python -u watcher.py
