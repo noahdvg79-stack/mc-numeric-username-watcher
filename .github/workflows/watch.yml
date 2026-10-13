@@ -1,0 +1,38 @@
+name: Watch Minecraft usernames
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/5 * * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: numeric-username-watcher
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Scan Discord channel and notify
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          SOURCE_CHANNEL_ID: ${{ secrets.SOURCE_CHANNEL_ID }}
+          OUTPUT_WEBHOOK_URL: ${{ secrets.OUTPUT_WEBHOOK_URL }}
+        run: python watcher.py
+
+      - name: Save watcher state
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Update username watcher state"
+          file_pattern: state.json
